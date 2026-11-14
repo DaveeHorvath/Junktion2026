@@ -64,12 +64,12 @@ def togglePredict():
 def periodicPredict():
     global latest
     global latestCount
-    if latestCount >= 2:
+    if latestCount >= 0:
         requests.get(f'http://10.0.32.47:8000/?text={latest}')
         latestCount = 0
     if isPredicting:
         decide()
-    threading.Timer(0.05, periodicPredict).start()
+    threading.Timer(0.01, periodicPredict).start()
 
 def decide():
     global predictionQueue

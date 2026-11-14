@@ -1,5 +1,5 @@
 
-with open("testdata.csv", "a") as target:
+with open("testdata.csv", "w") as target:
     current = []
 
     for i in ['0','a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y']:
