@@ -18,8 +18,8 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
 N_FEATURES = 42
-MODEL_PATH = "model_aaron.pt"
-# MODEL_PATH = "model.pt"
+# MODEL_PATH = "model_aaron.pt"
+MODEL_PATH = "model.pt"
 # MODEL_PATH = "maxwell_model.pt"
 
 # ---------------------------------------------------------------- data

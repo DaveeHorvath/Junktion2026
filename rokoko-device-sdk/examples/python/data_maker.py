@@ -65,7 +65,7 @@ def periodicPredict():
     global latest
     global latestCount
     if latestCount >= 0:
-        requests.get(f'http://10.0.32.47:8000/?text={latest}')
+        requests.get(f'http://192.168.1.102:8000/?text={latest}')
         latestCount = 0
     if isPredicting:
         decide()
