@@ -11,6 +11,8 @@ The communication between our components is done through http.
 
 A WebUI has also been made available for showing off our collected data and allowing for a small minigame in the letters.py, where following the signs on the screen keeps giving new random signs, increasing active recall.
 The ui has been coauthored by Claude. It allows by external transform settings on the ```/pose``` endpoint, and calibration under ```/calbirate```. As mentioned our gathered data can be used to synthesise videos for words. 
+<img width="1795" height="938" alt="image" src="https://github.com/user-attachments/assets/f1fe880f-0e9a-46b7-b0ec-0bcd6c88e2dc" />
+
 
 ## Possible implementations
 Our product is to serve the people, allowing education and communication when it matters the most. Being able to sign can be an invaluable life skill, and our devices mostly due to the price and previous pushback arent targeting 
