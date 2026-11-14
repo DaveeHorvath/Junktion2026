@@ -21,3 +21,7 @@ Due to feedback and previous pushback of similar product we don't want to target
 ## Future ideas
 Increasing access to schools and communities, especially targeting hospitals where proper usage of such technologies would just improve lifes, but in cases save them too. Adding support for motioned characters of the alphabet (j and z) would be a first priority, while creating a larger labeled dataset would help other builders.
 In the longer term adding proper support for full words, sentences and expressions while increasing availability of the physical arms which in our limited experience (and dreams) could be used by beginner and advanced learners alike to improve their conversational skills.
+
+## Usage
+In its current stage the set of circumstances and hardcoded ips would prevent anyone from using these out of the box. The LED matrix as common as it is, the format and connections seem to be non-standard. 
+For the expansions on the examples of Rokokos-sdk they require an active license, the driver running in the background and all relevant bridges outline in their documentation under https://sdk.rokoko.com/
