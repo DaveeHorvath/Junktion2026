@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hand Pose Viewer</title>
+<style>
+  :root {
+    --bg: #15171c; --panel: rgba(25, 28, 35, 0.9); --text: #e8eaef; --muted: #8d95a5;
+    --line: rgba(255, 255, 255, 0.09); --accent: #86b6ff; --ok: #4ade80; --bad: #f87171; --idle: #fbbf24;
+  }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 12.5px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+  canvas { display: block; }
+  #panel { position: fixed; top: 12px; left: 12px; width: 280px; max-height: calc(100% - 24px); overflow: auto;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+    backdrop-filter: blur(8px); box-sizing: border-box; }
+  h1 { font-size: 13px; margin: 0 0 8px; font-weight: 600; letter-spacing: .02em; }
+  .status { display: flex; align-items: center; gap: 7px; color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--idle); flex: none; }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 8px var(--ok); } .dot.bad { background: var(--bad); }
+  code { font: 11.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); word-break: break-all; }
+  .endpoint { margin: 8px 0 10px; padding: 7px 8px; background: rgba(0,0,0,.25); border-radius: 6px; border: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  td { padding: 2px 0; white-space: nowrap; } td:first-child { color: var(--muted); width: 52px; }
+  td.live { color: var(--ok); } td.rest { color: var(--muted); }
+  .sec { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px; }
+  label { white-space: nowrap; display: flex; align-items: center; gap: 8px; margin: 5px 0; color: var(--muted); }
+  label span.v { margin-left: auto; color: var(--text); font-variant-numeric: tabular-nums; }
+  input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+  select, button { font: inherit; color: var(--text); background: #2a2f3a; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; cursor: pointer; }
+  button:hover, select:hover { background: #343a47; }
+  button.on { background: #2b4a7a; border-color: var(--accent); }
+  .btns { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  .spellrow { display: flex; gap: 5px; margin-top: 6px; }
+  .spellrow input { flex: 1; min-width: 0; font: inherit; color: var(--text); background: rgba(0,0,0,.25);
+    border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+  .spellrow input:focus { outline: none; border-color: var(--accent); }
+  #word { margin-top: 8px; font: 600 15px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .12em; min-height: 20px; word-break: break-all; }
+  #word span { color: var(--muted); transition: color .15s; }
+  #word span.done { color: var(--text); }
+  #word span.now { color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
+  #word span.skip { color: var(--muted); opacity: .35; text-decoration: line-through; }
+  #bigLetter { position: fixed; right: 24px; bottom: 18px; font: 700 96px/1 ui-sans-serif, system-ui, sans-serif;
+    color: var(--text); opacity: 0; transition: opacity .2s; pointer-events: none; text-transform: uppercase; }
+  .hint { color: var(--muted); font-size: 11px; margin-top: 6px; }
+  #toggle { display: none; }
+  body.cyber { --panel: rgba(9, 7, 20, 0.86); --line: rgba(255, 43, 214, 0.28); --accent: #00e5ff; --text: #e9f6ff; --muted: #8f8fb8; }
+  body.cyber #panel { box-shadow: 0 0 24px rgba(255, 43, 214, 0.18), inset 0 0 0 1px rgba(0, 229, 255, 0.08); }
+  body.cyber h1 { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; letter-spacing: .18em; color: #00e5ff; text-shadow: 0 0 8px rgba(0, 229, 255, .7); }
+  body.cyber select, body.cyber button { background: #160f2b; }
+  body.cyber button:hover, body.cyber select:hover { background: #24174a; }
+  body.cyber #bigLetter { color: #00e5ff; text-shadow: 0 0 14px #00e5ff, 0 0 42px #ff2bd6; }
+  @media (max-width: 520px) {
+    #panel { width: calc(100% - 24px); max-height: 46%; }
+  }
+</style>
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="panel">
+  <h1>Hand pose</h1>
+  <div class="status"><span class="dot" id="dot"></span><span id="statusText">Connecting…</span></div>
+  <div class="endpoint">POST <code id="endpoint"></code></div>
+  <table id="readout"></table>
+
+  <div class="sec">
+    <label>Follow speed <input type="range" id="speed" min="1" max="61" value="18"><span class="v" id="speedVal"></span></label>
+    <label>Hand <select id="hand"><option value="right">Right</option><option value="left">Left</option></select>
+      <span class="v" id="modeVal"></span></label>
+    <label>Style <select id="style"><option value="natural">Natural</option><option value="cyber">Cyberpunk</option></select></label>
+    <label><input type="checkbox" id="bones"> Show bones</label>
+    <label><input type="checkbox" id="follow" checked> Camera follows palm</label>
+  </div>
+
+  <div class="sec">
+    <div style="color:var(--muted)">Spell with recorded signs</div>
+    <form class="spellrow" id="spellForm">
+      <input id="spellText" placeholder="type a word…" autocomplete="off" spellcheck="false">
+      <button id="spellBtn" type="submit">Play</button>
+    </form>
+    <label>Hold <input type="range" id="hold" min="0.1" max="2" step="0.05" value="0.5"><span class="v" id="holdVal"></span></label>
+    <label>Transition <input type="range" id="trans" min="0.05" max="1.5" step="0.05" value="0.35"><span class="v" id="transVal"></span></label>
+    <div id="word"></div>
+  </div>
+
+  <div class="sec">
+    <div style="color:var(--muted)">Send test poses through the endpoint</div>
+    <div class="btns">
+      <button data-pose="open">Open</button>
+      <button data-pose="fist">Fist</button>
+      <button data-pose="point">Point</button>
+      <button data-pose="peace">Peace</button>
+      <button id="stream">Stream demo</button>
+      <button id="copy">Copy curl</button>
+    </div>
+    <div class="hint" id="hint">Drag to orbit · scroll to zoom</div>
+  </div>
+</div>
+
+<div id="bigLetter"></div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ---------------- config ----------------
+const params = new URLSearchParams(location.search);
+const BASE = (params.get('server') || (location.protocol.startsWith('http') ? location.origin : 'http://localhost:3000')).replace(/\/$/, '');
+const PARTS = ['palm', 'thumb', 'index', 'middle', 'ring', 'pinky'];
+const FINGERS = PARTS.slice(1);
+
+// Rest layout of a RIGHT hand in meters. Palm faces +Z, fingers point +Y, thumb on +X.
+// Finger curl toward the palm is a positive rotation about the finger's local X axis.
+const RIGHT = {
+  thumb:  { pos: [0.033, 0.022, 0.011],  euler: [0.35, -0.55, -0.62], len: [0.038, 0.030, 0.026], r: [0.0112, 0.0090] },
+  index:  { pos: [0.026, 0.089, 0.0],    euler: [0, 0, 0],            len: [0.043, 0.025, 0.021], r: [0.0096, 0.0078] },
+  middle: { pos: [0.0085, 0.093, 0.0],   euler: [0, 0, 0],            len: [0.047, 0.028, 0.022], r: [0.0099, 0.0080] },
+  ring:   { pos: [-0.0105, 0.089, 0.0],  euler: [0, 0, 0],            len: [0.044, 0.026, 0.021], r: [0.0093, 0.0075] },
+  pinky:  { pos: [-0.0285, 0.081, 0.0],  euler: [0, 0, 0],            len: [0.034, 0.020, 0.019], r: [0.0081, 0.0066] },
+};
+
+function restFor(side) {
+  const out = { palm: { pos: new THREE.Vector3(), quat: new THREE.Quaternion() } };
+  for (const f of FINGERS) {
+    const d = RIGHT[f];
+    const m = side === 'left' ? -1 : 1; // mirror across the YZ plane
+    out[f] = {
+      pos: new THREE.Vector3(d.pos[0] * m, d.pos[1], d.pos[2]),
+      quat: new THREE.Quaternion().setFromEuler(new THREE.Euler(d.euler[0], d.euler[1] * m, d.euler[2] * m)),
+      len: d.len, r: d.r,
+    };
+  }
+  return out;
+}
+
+// ---------------- scene ----------------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x15171c);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.55;
+
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.005, 100);
+camera.position.set(0.14, 0.15, 0.36);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.075, 0);
+controls.enableDamping = true;
+
+const key = new THREE.DirectionalLight(0xffffff, 2.2);
+key.position.set(0.4, 0.8, 0.6);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+Object.assign(key.shadow.camera, { left: -0.3, right: 0.3, top: 0.3, bottom: -0.3, near: 0.1, far: 3 });
+key.shadow.bias = -0.0005;
+scene.add(key, key.target, new THREE.HemisphereLight(0xdfe8ff, 0x2a2622, 0.6));
+
+const grid = new THREE.GridHelper(2, 40, 0x3a4150, 0x262b35);
+grid.position.y = -0.06;
+scene.add(grid);
+const shadowFloor = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShadowMaterial({ opacity: 0.28 }));
+shadowFloor.rotation.x = -Math.PI / 2;
+shadowFloor.position.y = -0.0599;
+shadowFloor.receiveShadow = true;
+scene.add(shadowFloor);
+
+// ---------------- styles ----------------
+const cyberGrid = new THREE.GridHelper(2, 40, 0xff2bd6, 0x3a1670);
+cyberGrid.position.y = -0.06;
+cyberGrid.material.toneMapped = false;
+cyberGrid.visible = false;
+scene.add(cyberGrid);
+const rimLight = new THREE.DirectionalLight(0x00e5ff, 2.4);
+rimLight.visible = false;
+scene.add(rimLight, rimLight.target);
+
+// Dark chrome with a neon fresnel rim and slow holographic scan lines, injected into the standard shader.
+const cyberUniforms = { rimA: { value: new THREE.Color(0x00e5ff) }, rimB: { value: new THREE.Color(0xff2bd6) }, uTime: { value: 0 } };
+const cyberMat = new THREE.MeshPhysicalMaterial({ color: 0x12141c, metalness: 0.85, roughness: 0.3, clearcoat: 0.7, clearcoatRoughness: 0.18 });
+cyberMat.onBeforeCompile = (shader) => {
+  Object.assign(shader.uniforms, cyberUniforms);
+  shader.fragmentShader = shader.fragmentShader
+    .replace('#include <common>', '#include <common>\nuniform vec3 rimA;\nuniform vec3 rimB;\nuniform float uTime;')
+    .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      float rim = 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
+      float scan = smoothstep(0.9, 1.0, sin(vViewPosition.y * 140.0 - uTime * 3.0) * 0.5 + 0.5);
+      totalEmissiveRadiance += mix(rimB, rimA, rim) * pow(rim, 3.2) * 1.25 + rimA * scan * 0.12;`);
+};
+const wireMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff, wireframe: true, transparent: true, opacity: 0.06,
+  blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+const nodeMat = new THREE.MeshBasicMaterial({ color: 0x7ff3ff, transparent: true, opacity: 0.75, depthTest: false, toneMapped: false });
+const nodeGeo = new THREE.SphereGeometry(1, 12, 8);
+
+// Bloom only runs in the cyberpunk style.
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.6, 0.45, 0.82));
+composer.addPass(new OutputPass());
+
+let style = 'natural';
+function decorate(h) {
+  // Wireframe overlay that deforms with the same skeleton, plus glowing joint nodes on every bone.
+  const wire = new THREE.SkinnedMesh(h.mesh.geometry, wireMat);
+  wire.bind(h.mesh.skeleton, h.mesh.bindMatrix);
+  wire.frustumCulled = false;
+  h.mesh.add(wire);
+  const nodes = h.mesh.skeleton.bones.map((b) => {
+    const n = new THREE.Mesh(nodeGeo, nodeMat);
+    n.scale.setScalar(b.name === 'palm' ? 0.0028 : b.name.endsWith('_3') ? 0.0013 : 0.0019);
+    n.renderOrder = 10;
+    b.add(n);
+    return n;
+  });
+  h.extras = [wire, ...nodes];
+}
+function applyStyle(s) {
+  style = s;
+  const cyber = s === 'cyber';
+  document.body.classList.toggle('cyber', cyber);
+  if (hand) {
+    hand.mesh.material = cyber ? cyberMat : skinMat;
+    for (const e of hand.extras) e.visible = cyber;
+  }
+  scene.background.set(cyber ? 0x07060e : 0x15171c);
+  scene.fog = cyber ? new THREE.Fog(0x07060e, 0.45, 1.6) : null;
+  scene.environmentIntensity = cyber ? 0.3 : 0.55;
+  grid.visible = !cyber; cyberGrid.visible = cyber;
+  key.color.set(cyber ? 0xff4fd8 : 0xffffff); key.intensity = cyber ? 1.3 : 2.2;
+  rimLight.visible = cyber;
+  shadowFloor.material.opacity = cyber ? 0.45 : 0.28;
+  try { localStorage.setItem('handStyle', s); } catch {}
+}
+
+// ---------------- rigged hand ----------------
+const skinMat = new THREE.MeshPhysicalMaterial({
+  color: 0xd9a487, roughness: 0.55, sheen: 0.6, sheenRoughness: 0.5, sheenColor: 0xffc9b0, clearcoat: 0.08,
+});
+
+function setSkin(geo, weightFn) {
+  const pos = geo.attributes.position;
+  const idx = new Uint16Array(pos.count * 4), w = new Float32Array(pos.count * 4);
+  for (let i = 0; i < pos.count; i++) {
+    const [a, b, t] = weightFn(pos.getY(i));
+    idx[i * 4] = a; idx[i * 4 + 1] = b; w[i * 4] = 1 - t; w[i * 4 + 1] = t;
+  }
+  geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(idx, 4));
+  geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(w, 4));
+  return geo;
+}
+
+// Tapered tube with rounded ends and slight knuckle bulges, built along +Y from the finger root.
+function fingerGeometry(len, r0, r1) {
+  const L = len[0] + len[1] + len[2];
+  const J1 = len[0], J2 = len[0] + len[1];
+  const bulge = (y) => 0.0004 * (Math.exp(-(((y - J1) / 0.006) ** 2)) + Math.exp(-(((y - J2) / 0.005) ** 2)));
+  const pts = [];
+  for (let i = 0; i <= 6; i++) {
+    const a = -Math.PI / 2 + (i / 6) * (Math.PI / 2);
+    pts.push(new THREE.Vector2(Math.max(r0 * Math.cos(a), 1e-5), r0 * 0.7 * Math.sin(a)));
+  }
+  const body = 48;
+  for (let i = 1; i <= body; i++) {
+    const t = i / body, y = t * (L - r1);
+    pts.push(new THREE.Vector2(r0 + (r1 - r0) * t + bulge(y), y));
+  }
+  for (let i = 1; i <= 8; i++) {
+    const a = (i / 8) * (Math.PI / 2);
+    pts.push(new THREE.Vector2(Math.max(r1 * Math.cos(a), 1e-5), L - r1 + r1 * Math.sin(a)));
+  }
+  const g = new THREE.LatheGeometry(pts, 22);
+  g.scale(1, 1, 0.86);
+  return { geo: g, J1, J2 };
+}
+
+function buildHand(side) {
+  const rest = restFor(side);
+  const bones = [];
+  const palmBone = new THREE.Bone(); palmBone.name = 'palm'; bones.push(palmBone);
+  const chains = {};
+  const geos = [];
+
+  // Palm (slightly narrower at the wrist) + wrist stub, all bound to the palm bone.
+  const palm = new RoundedBoxGeometry(0.08, 0.094, 0.027, 4, 0.0115);
+  palm.translate(0, 0.047, 0);
+  const pp = palm.attributes.position;
+  for (let i = 0; i < pp.count; i++) pp.setX(i, pp.getX(i) * (0.86 + 0.14 * THREE.MathUtils.clamp(pp.getY(i) / 0.094, 0, 1)));
+  geos.push(setSkin(palm, () => [0, 0, 0]));
+  const wrist = new THREE.CylinderGeometry(0.025, 0.028, 0.05, 28, 1);
+  wrist.scale(1, 1, 0.58); wrist.translate(0, -0.016, 0);
+  geos.push(setSkin(wrist, () => [0, 0, 0]));
+
+  for (const f of FINGERS) {
+    const r = rest[f];
+    const chain = [];
+    let parent = palmBone;
+    for (let j = 0; j < 4; j++) {
+      const b = new THREE.Bone();
+      b.name = `${f}_${j}`;
+      if (j === 0) { b.position.copy(r.pos); b.quaternion.copy(r.quat); }
+      else b.position.set(0, r.len[j - 1], 0);
+      parent.add(b); parent = b; chain.push(b); bones.push(b);
+    }
+    chains[f] = chain;
+    const [i0, i1, i2] = chain.slice(0, 3).map((b) => bones.indexOf(b));
+    const { geo, J1, J2 } = fingerGeometry(r.len, r.r[0], r.r[1]);
+    const blend = 0.0055;
+    const s = (x) => x * x * (3 - 2 * x);
+    setSkin(geo, (y) => {
+      if (y < J1 - blend) return [i0, i1, 0];
+      if (y < J1 + blend) return [i0, i1, s((y - J1 + blend) / (2 * blend))];
+      if (y < J2 - blend) return [i1, i2, 0];
+      if (y < J2 + blend) return [i1, i2, s((y - J2 + blend) / (2 * blend))];
+      return [i2, i1, 0];
+    });
+    geo.applyMatrix4(new THREE.Matrix4().compose(r.pos, r.quat, new THREE.Vector3(1, 1, 1)));
+    geos.push(geo);
+  }
+
+  const merged = mergeGeometries(geos.map((g) => (g.index ? g.toNonIndexed() : g)));
+  const mesh = new THREE.SkinnedMesh(merged, skinMat);
+  mesh.castShadow = true;
+  mesh.add(palmBone);
+  mesh.updateMatrixWorld(true);
+  mesh.bind(new THREE.Skeleton(bones));
+  mesh.frustumCulled = false; // the hand can move far from its bind-pose bounds
+  return { mesh, rest, palmBone, chains };
+}
+
+// ---------------- pose targets & smoothing ----------------
+let hand, helper;
+let mode = 'distribute';
+let lastState = null;
+const targets = {};
+for (const p of PARTS) targets[p] = { pos: new THREE.Vector3(), quat: new THREE.Quaternion(), j1: null, j2: null, live: false };
+
+function mountHand(side) {
+  if (hand) { scene.remove(hand.mesh); hand.mesh.geometry.dispose(); }
+  if (helper) { scene.remove(helper); helper = null; }
+  hand = buildHand(side);
+  scene.add(hand.mesh);
+  decorate(hand);
+  applyStyle(style);
+  if (document.getElementById('bones').checked) addHelper();
+  applyState(lastState || { pose: {}, mode });
+}
+function addHelper() {
+  helper = new THREE.SkeletonHelper(hand.mesh);
+  helper.material.depthTest = false;
+  scene.add(helper);
+}
+
+function applyState(s) {
+  lastState = s;
+  mode = s.mode || 'distribute';
+  for (const p of PARTS) {
+    const v = s.pose?.[p], t = targets[p], r = hand.rest[p];
+    t.live = !!v;
+    if (!v) { t.pos.copy(r.pos); t.quat.copy(r.quat); t.j1 = t.j2 = null; continue; }
+    if (v[0] === null) {
+      // Calibrated glove data: rest knuckle position, rotation is a delta on top of the rest pose.
+      t.pos.copy(r.pos);
+      t.quat.fromArray(v, 3).normalize().multiply(r.quat);
+      t.j1 = t.j2 = null;
+      continue;
+    }
+    t.pos.fromArray(v, 0);
+    t.quat.fromArray(v, 3).normalize();
+    t.j1 = v.length >= 11 ? new THREE.Quaternion().fromArray(v, 7).normalize() : null;
+    t.j2 = v.length >= 15 ? new THREE.Quaternion().fromArray(v, 11).normalize() : null;
+  }
+  document.getElementById('modeVal').textContent =
+    (s.calibrated ? 'calibrated · ' : '') + (mode === 'root' ? 'root' : 'curl');
+}
+
+function onServerState(s) {
+  if (spell) { lastState = s; return; }   // a spelling run owns the hand until it finishes
+  // A calibration fixes the handedness, so follow it.
+  if (s.hand && s.hand !== handSel.value) { handSel.value = s.hand; lastState = s; mountHand(s.hand); }
+  else applyState(s);
+}
+
+const I = new THREE.Quaternion();
+const _restInv = new THREE.Quaternion(), _delta = new THREE.Quaternion(), _part = new THREE.Quaternion();
+const _d0 = new THREE.Quaternion(), _d1 = new THREE.Quaternion(), _d2 = new THREE.Quaternion();
+
+function step(dt) {
+  const speed = +document.getElementById('speed').value;
+  const a = spell || speed > 60 ? 1 : 1 - Math.exp(-speed * dt);
+
+  hand.palmBone.position.lerp(targets.palm.pos, a);
+  hand.palmBone.quaternion.slerp(targets.palm.quat, a);
+
+  for (const f of FINGERS) {
+    const t = targets[f], [b0, b1, b2] = hand.chains[f];
+    b0.position.lerp(t.pos, a);
+    if (t.j1 || t.j2 || mode === 'root') {
+      _d0.copy(t.quat); _d1.copy(t.j1 || I); _d2.copy(t.j2 || I);
+    } else {
+      // Spread the finger's rotation (relative to rest) evenly over its three joints,
+      // so a single quaternion produces a natural curl instead of a rigid stick.
+      _restInv.copy(hand.rest[f].quat).invert();
+      _delta.multiplyQuaternions(_restInv, t.quat);
+      _part.slerpQuaternions(I, _delta, 1 / 3);
+      _d0.multiplyQuaternions(hand.rest[f].quat, _part); _d1.copy(_part); _d2.copy(_part);
+    }
+    b0.quaternion.slerp(_d0, a);
+    b1.quaternion.slerp(_d1, a);
+    b2.quaternion.slerp(_d2, a);
+  }
+}
+
+// ---------------- connection ----------------
+const dot = document.getElementById('dot'), statusText = document.getElementById('statusText');
+document.getElementById('endpoint').textContent = `${BASE}/pose`;
+let msgCount = 0, rate = 0, lastMsgAt = 0, connected = false;
+
+function connect() {
+  const es = new EventSource(`${BASE}/events`);
+  es.onopen = () => { connected = true; updateStatus(); };
+  es.onmessage = (e) => {
+    try { onServerState(JSON.parse(e.data)); msgCount++; lastMsgAt = performance.now(); } catch (err) { console.warn(err); }
+  };
+  es.onerror = () => { connected = false; updateStatus(); };
+}
+function updateStatus() {
+  dot.className = 'dot ' + (connected ? 'ok' : 'bad');
+  if (!connected) { statusText.textContent = 'Server not reachable — retrying…'; return; }
+  const ago = lastMsgAt ? (performance.now() - lastMsgAt) / 1000 : Infinity;
+  statusText.textContent = rate > 0 ? `Live · ${rate} updates/s` : ago < Infinity ? `Connected · last update ${ago < 60 ? ago.toFixed(0) + 's' : Math.round(ago / 60) + 'm'} ago` : 'Connected · waiting for poses';
+}
+setInterval(() => { rate = msgCount; msgCount = 0; updateStatus(); }, 1000);
+
+const readout = document.getElementById('readout');
+readout.innerHTML = PARTS.map((p) => `<tr><td>${p}</td><td id="ro-${p}"></td></tr>`).join('');
+setInterval(() => {
+  for (const p of PARTS) {
+    const t = targets[p], el = document.getElementById(`ro-${p}`);
+    el.className = t.live ? 'live' : 'rest';
+    el.textContent = t.live ? `${t.pos.x.toFixed(3)} ${t.pos.y.toFixed(3)} ${t.pos.z.toFixed(3)}${t.j1 ? ' +joints' : ''}` : 'rest';
+  }
+}, 120);
+
+// ---------------- test poses (they go through POST /pose like any client) ----------------
+async function post(body) {
+  try {
+    const r = await fetch(`${BASE}/pose`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ calibrated: false, ...body }) });
+    const j = await r.json();
+    if (!j.ok) hint(j.error, true);
+  } catch { hint('Could not reach the server', true); }
+}
+function hint(text, bad) {
+  const el = document.getElementById('hint');
+  el.textContent = text; el.style.color = bad ? 'var(--bad)' : '';
+}
+
+const side = () => document.getElementById('hand').value;
+const q = (x, y, z) => new THREE.Quaternion().setFromEuler(new THREE.Euler(x, side() === 'left' ? -y : y, side() === 'left' ? -z : z));
+function finger(f, rel) { // rest position, rest rotation * relative rotation → 7 floats
+  const r = hand.rest[f];
+  return [...r.pos.toArray(), ...r.quat.clone().multiply(rel).toArray()].map((n) => +n.toFixed(5));
+}
+const CURL = 2.75;
+const POSES = {
+  open: () => ({ reset: true, mode: 'distribute' }),
+  fist: () => ({ mode: 'distribute', thumb: finger('thumb', q(1.3, 0, 0.35)),
+    index: finger('index', q(CURL, 0, 0)), middle: finger('middle', q(CURL, 0, 0)), ring: finger('ring', q(CURL, 0, 0)), pinky: finger('pinky', q(CURL, 0, 0)) }),
+  point: () => ({ mode: 'distribute', thumb: finger('thumb', q(1.1, 0, 0.3)),
+    index: finger('index', q(0.05, 0, 0)), middle: finger('middle', q(CURL, 0, 0)), ring: finger('ring', q(CURL, 0, 0)), pinky: finger('pinky', q(CURL, 0, 0)) }),
+  peace: () => ({ mode: 'distribute', thumb: finger('thumb', q(1.1, 0, 0.3)),
+    index: finger('index', q(0, 0, -0.2)), middle: finger('middle', q(0, 0, 0.1)), ring: finger('ring', q(CURL, 0, 0)), pinky: finger('pinky', q(CURL, 0, 0)) }),
+};
+document.querySelectorAll('[data-pose]').forEach((b) => b.addEventListener('click', () => { if (spell) stopSpell(false); stopStream(); post(POSES[b.dataset.pose]()); }));
+
+let streamTimer = null;
+const streamBtn = document.getElementById('stream');
+function stopStream() { clearInterval(streamTimer); streamTimer = null; streamBtn.classList.remove('on'); }
+streamBtn.addEventListener('click', () => {
+  if (streamTimer) { stopStream(); post({ reset: true }); return; }
+  streamBtn.classList.add('on');
+  const t0 = performance.now();
+  streamTimer = setInterval(() => { // ~30 POSTs per second, like a tracker would send
+    const t = (performance.now() - t0) / 1000;
+    const body = {
+      mode: 'distribute',
+      palm: [0.03 * Math.sin(t * 0.8), 0.015 * Math.sin(t * 1.6), 0, ...new THREE.Quaternion().setFromEuler(new THREE.Euler(0.25 * Math.sin(t * 0.7), 0.5 * Math.sin(t * 0.5), 0.2 * Math.sin(t * 1.1))).toArray()],
+      thumb: finger('thumb', q(0.6 + 0.6 * Math.sin(t * 2.2), 0, 0.2)),
+    };
+    ['index', 'middle', 'ring', 'pinky'].forEach((f, i) => { body[f] = finger(f, q(1.3 + 1.3 * Math.sin(t * 3 - i * 0.7), 0, 0)); });
+    post(body);
+  }, 33);
+});
+
+document.getElementById('copy').addEventListener('click', async () => {
+  const cmd = `curl -X POST ${BASE}/pose -H "Content-Type: application/json" -d '{"palm":[0,0,0,0,0,0,1],"index":[0.026,0.089,0,0.5,0,0,0.866]}'`;
+  try { await navigator.clipboard.writeText(cmd); hint('curl command copied'); } catch { hint(cmd); }
+});
+
+
+// ---------------- spelling with recorded signs ----------------
+// Signs come from GET /signs: per letter, each finger's rotation (viewer axes) on top of the rest pose,
+// already calibrated from the recording's neutral "0" row. Playback runs here, timed exactly:
+// smooth transition into each sign, then hold it.
+let signs = null;
+let spell = null;
+const wordEl = document.getElementById('word'), bigLetter = document.getElementById('bigLetter');
+const holdEl = document.getElementById('hold'), transEl = document.getElementById('trans');
+const showTimes = () => {
+  document.getElementById('holdVal').textContent = (+holdEl.value).toFixed(2) + 's';
+  document.getElementById('transVal').textContent = (+transEl.value).toFixed(2) + 's';
+};
+holdEl.addEventListener('input', showTimes); transEl.addEventListener('input', showTimes); showTimes();
+
+async function loadSigns() {
+  const r = await fetch(`${BASE}/signs`);
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error);
+  signs = j.signs;
+}
+
+function signQuats(label) { // finger -> target root quaternion for a recorded sign
+  const pose = signs[label] || {}, out = {};
+  for (const f of FINGERS) {
+    const v = pose[f];
+    out[f] = v ? new THREE.Quaternion().fromArray(v, 3).normalize().multiply(hand.rest[f].quat) : hand.rest[f].quat.clone();
+  }
+  return out;
+}
+
+function currentQuats() {
+  const out = {};
+  for (const f of FINGERS) out[f] = targets[f].quat.clone();
+  return out;
+}
+
+async function startSpell(text) {
+  try { if (!signs) await loadSigns(); }
+  catch (err) { hint(`Signs unavailable: ${err.message}`, true); return; }
+  stopStream();
+  const items = [...text.toLowerCase()].map((ch) => {
+    const label = ch === ' ' ? '0' : ch;   // a space shows the neutral hand
+    return { ch, label, ok: label in signs };
+  });
+  wordEl.innerHTML = items.map((it) => `<span class="${it.ok ? '' : 'skip'}">${it.ch === ' ' ? '&nbsp;' : it.ch.replace(/[<&]/g, '')}</span>`).join('');
+  const queue = items.map((it, i) => ({ ...it, i })).filter((it) => it.ok);
+  if (!queue.length) { hint('None of those letters have a recorded sign', true); return; }
+  const missing = [...new Set(items.filter((it) => !it.ok).map((it) => it.ch))];
+  hint(missing.length ? `No sign for: ${missing.join(' ')} (skipped)` : `Spelling ${queue.length} sign${queue.length > 1 ? 's' : ''}…`);
+  for (const f of FINGERS) { targets[f].pos.copy(hand.rest[f].pos); targets[f].j1 = targets[f].j2 = null; targets[f].live = true; }
+  spell = { queue, k: -1, phase: 'hold', t: Infinity, from: null, to: currentQuats() };
+  document.getElementById('spellBtn').textContent = 'Stop';
+}
+
+function stopSpell(finished) {
+  spell = null;
+  document.getElementById('spellBtn').textContent = 'Play';
+  bigLetter.style.opacity = 0;
+  if (finished) hint('Done. Live updates resume with the next pose sent to the server.');
+}
+
+const smooth = (x) => x * x * (3 - 2 * x);
+function advanceSpell(dt) {
+  const s = spell;
+  s.t += dt;
+  if (s.phase === 'move') {
+    const u = smooth(Math.min(s.t / +transEl.value, 1));
+    for (const f of FINGERS) targets[f].quat.slerpQuaternions(s.from[f], s.to[f], u);
+    if (s.t >= +transEl.value) { s.phase = 'hold'; s.t = 0; }
+    return;
+  }
+  if (s.t < +holdEl.value) return;
+  // next sign
+  s.k++;
+  const spans = wordEl.children;
+  if (s.k > 0) { const prev = spans[s.queue[s.k - 1].i]; prev.className = 'done'; }
+  if (s.k >= s.queue.length) { stopSpell(true); return; }
+  const item = s.queue[s.k];
+  spans[item.i].className = 'now';
+  bigLetter.textContent = item.ch === ' ' ? '' : item.ch;
+  bigLetter.style.opacity = item.ch === ' ' ? 0 : 0.9;
+  s.from = currentQuats();
+  s.to = signQuats(item.label);
+  s.phase = 'move'; s.t = 0;
+}
+
+document.getElementById('spellForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (spell) { stopSpell(false); return; }
+  const text = document.getElementById('spellText').value;
+  if (text.trim()) startSpell(text);
+});
+
+// ---------------- UI wiring ----------------
+const speedEl = document.getElementById('speed'), speedVal = document.getElementById('speedVal');
+const showSpeed = () => { speedVal.textContent = +speedEl.value > 60 ? 'instant' : speedEl.value; };
+speedEl.addEventListener('input', showSpeed); showSpeed();
+const handSel = document.getElementById('hand');
+if (params.get('hand') === 'left') handSel.value = 'left';
+handSel.addEventListener('change', () => mountHand(handSel.value));
+document.getElementById('bones').addEventListener('change', (e) => {
+  if (e.target.checked) addHelper(); else if (helper) { scene.remove(helper); helper = null; }
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+});
+
+// ---------------- loop ----------------
+const styleSel = document.getElementById('style');
+let savedStyle = null;
+try { savedStyle = localStorage.getItem('handStyle'); } catch {}
+style = params.get('style') === 'cyber' || params.get('style') === 'cyberpunk' ? 'cyber' : (params.get('style') === 'natural' ? 'natural' : savedStyle || 'natural');
+styleSel.value = style;
+styleSel.addEventListener('change', () => applyStyle(styleSel.value));
+mountHand(handSel.value);
+connect();
+const clock = new THREE.Clock();
+const _focus = new THREE.Vector3(), _shift = new THREE.Vector3();
+renderer.setAnimationLoop(() => {
+  const rawDt = clock.getDelta();
+  const dt = Math.min(rawDt, 0.1);
+  if (spell) advanceSpell(Math.min(rawDt, 1)); // real elapsed time keeps sign timing exact
+  step(dt);
+  if (document.getElementById('follow').checked) {
+    hand.palmBone.updateWorldMatrix(true, false);
+    _focus.set(0, 0.075, 0).applyMatrix4(hand.palmBone.matrixWorld);
+    _shift.subVectors(_focus, controls.target).multiplyScalar(1 - Math.exp(-4 * dt));
+    controls.target.add(_shift); camera.position.add(_shift);
+  }
+  key.position.copy(controls.target).add(new THREE.Vector3(0.4, 0.8, 0.6));
+  key.target.position.copy(controls.target);
+  rimLight.position.copy(controls.target).add(new THREE.Vector3(-0.5, 0.35, -0.6));
+  rimLight.target.position.copy(controls.target);
+  cyberUniforms.uTime.value += dt;
+  controls.update();
+  if (style === 'cyber') composer.render(); else renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>
