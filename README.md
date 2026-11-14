@@ -3,8 +3,8 @@
 make learning ASL easier, more accessible and even more fun with Rokoko's motion tracking tech!
 
 ## Technical details
-Using Rokokos motion tracking gloves, based on their sdk examples we have build a data collection tool for labeling actively signed ASL letters. This is based on the rgmp architecture of documented in the sdk.
-After this data gathering a Neural Network created with PyTorch has been trained, allowing us to categorize handsigns in an almost real time fashion: polling of about 0.1-0.2s. Examples of this are in the letters and teaching python files.
+Using Rokokos motion tracking gloves, based on their sdk examples we have build a data collection tool for labeling actively signed ASL letters.
+This data gathering was followed by a Neural Network being trained with PyTorch, allowing us to categorize handsigns in an almost real time fashion: polling of about 0.1-0.2s. Examples of this are in the letters and teaching python files.
 These are the connecting software with a Raspberry Pi 3+ controlling a 64x32 LED matrix to make the experience even more interesting. This allowed us to create the demonstration at the Rokoko stand getting text data from ASL while a robotic hand was mirroring these movements.
 
 The communication between our components is done through http. 
