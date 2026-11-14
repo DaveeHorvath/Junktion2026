@@ -1,0 +1,543 @@
+/* RGMP viewer styling. The shared chrome (palette, app shell, top bar, buttons,
+   banner, .empty) lives in @rkk/bridge-web-core/styles.css, imported ahead of
+   this file in main.tsx. Only RGMP-specific rules live here. */
+
+/* Round "?" button in the top bar; opens the help dialog. */
+.help-btn {
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border-radius: 999px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.help-btn:hover:not(:disabled) {
+  color: var(--text);
+}
+
+/* ── Solver comparison ───────────────────────────────────────────────── */
+/* The optional second connection (rkk-hand-solver) and its live readout. Both
+   are diagnostics, so they stay out of the way until switched on. */
+.compare-toggle[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.compare-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 1rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-bar label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.compare-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.compare-hint code {
+  font-size: 0.95em;
+}
+
+/* ── Help dialog ─────────────────────────────────────────────────────── */
+.help-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.help-dialog {
+  width: min(80%, 100%);
+  max-height: 98%;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.help-dialog:focus {
+  outline: none;
+}
+
+.help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.help-header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.help-close {
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0.1rem 0.45rem;
+}
+
+.help-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  padding: 1rem 1.3rem;
+}
+
+@media (min-width: 460px) {
+  .help-body {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.help-section h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--headline);
+}
+
+.help-section h3:not(:first-child) {
+  margin-top: 1rem;
+}
+
+.help-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.help-table td {
+  padding: 0.2rem 0.5rem 0.2rem 0;
+  vertical-align: top;
+}
+
+.help-table td:first-child {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.help-table .help-group td {
+  padding-top: 0.5rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+/* bigger vertical spacing between kbd groups */
+.help-table .help-group:not(:first-child) td {
+  padding-top: 0.9rem;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.5rem;
+  text-align: center;
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+  padding: 0.11rem 0.4rem;
+  background: var(--panel-3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.help-axes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85rem;
+}
+
+.help-axes li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+}
+
+.help-swatch {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 3px;
+  flex: none;
+}
+
+.help-muted {
+  color: var(--muted);
+}
+
+p.help-muted {
+  margin-top: 2px;
+  font-size: 0.9rem;
+}
+
+div.axes-legends {
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+}
+
+span.white {
+  color: white;
+}
+
+div.axes-legends > div {
+  display: flex;
+  font-size: 0.85rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ── Main content: optional 3D pane + stream pane ────────────────────── */
+.content {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.scene-pane {
+  flex: 1.2;
+  min-width: 0;
+  position: relative;
+  border-right: 1px solid var(--border);
+}
+
+.scene-controls {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.emf-toggle[aria-pressed="true"],
+.obb-toggle[aria-pressed="true"],
+.xr-toggle[aria-pressed="true"],
+.coil-toggle[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* The pane's bottom-right corner (bottom-left is the dev perf overlay, top-right
+   the controls): a column holding the solver readout, when there is one, above
+   the grid's scale key, so the two can never overlap whatever their sizes. It
+   takes no pointer events, so it cannot interrupt an orbit drag that starts
+   under it. */
+.scene-corner {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+/* The grid's scale key (GridLegend.tsx). */
+.grid-legend {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.9rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.grid-legend figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+}
+
+.grid-legend svg {
+  display: block;
+  overflow: visible;
+}
+
+/* Small tiles, and the lines dividing the large one into small ones. */
+.grid-legend-tile {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+/* The large tile's outline, a little heavier, as the grid draws its sections. */
+.grid-legend-section {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.5;
+  shape-rendering: crispEdges;
+}
+
+/* Per-hand solver deltas, in the pane's bottom-right column (.scene-corner). */
+.compare-readout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--muted);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.compare-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.compare-swatch {
+  width: 0.7rem;
+  height: 0.2rem;
+  border-radius: 1px;
+}
+
+/* Dev-only perf overlay (PerfMonitor); never mounted in production builds. */
+.perf-overlay {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0.6rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--muted);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.stream-pane {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 1rem;
+}
+
+.devices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.device {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem 1rem;
+  min-width: 340px;
+  flex: 1 1 340px;
+  max-width: 560px;
+}
+
+.device-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.device-id {
+  font-weight: 600;
+}
+
+.device-type {
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
+.epoch {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+/* ── Status bar ──────────────────────────────────────────────────────── */
+/* The strip along the bottom of the app (StatusBar.tsx) collecting glanceable
+   per-device state. Always present — min-height keeps the panes from resizing
+   when the first badge appears. */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  min-height: 2rem;
+  padding: 0.25rem 1rem;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+}
+
+.status-device {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.status-device-id {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Badges for the calibration/init flags (status-flags.ts): amber while the
+   estimate is still converging, green once it settles. Absent entirely when
+   the device doesn't declare the flag. */
+.diag-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.diag-on {
+  color: var(--ok);
+}
+
+.diag-off {
+  /* --bridge is the shared amber: "still initializing", not an error. */
+  color: var(--bridge);
+}
+
+/* Named bits of a STATUS_FLAGS word: lit = set, dimmed = clear. Neutral on
+   purpose — see FlagChips in StreamPane.tsx. */
+.flag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.flag-chip {
+  font-size: 0.7rem;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+}
+
+.flag-set {
+  color: var(--text);
+  background: var(--panel-2);
+}
+
+/* ── Groups ──────────────────────────────────────────────────────────── */
+.group {
+  margin-top: 0.75rem;
+}
+
+.group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+}
+
+.group-name {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.rate {
+  color: var(--ok);
+  font-variant-numeric: tabular-nums;
+}
+
+.rate-expected {
+  color: var(--muted);
+}
+
+.ts {
+  margin-left: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.streams {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+}
+
+.stream {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) auto;
+  grid-template-areas:
+    "label measure"
+    "values values";
+  gap: 0.1rem 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.stream:last-child {
+  border-bottom: none;
+}
+
+.stream-label {
+  grid-area: label;
+  font-size: 0.85rem;
+}
+
+.stream-frame {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.stream-measure {
+  grid-area: measure;
+  justify-self: end;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  align-self: center;
+}
+
+.stream-values {
+  grid-area: values;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: 0.3rem 0 0;
+}

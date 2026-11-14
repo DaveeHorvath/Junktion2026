@@ -1,0 +1,191 @@
+/* Shared chrome for the bridge web apps: the dark palette, the app shell, the
+   top bar + connection controls, the base input/button system, the segmented
+   control, and the error banner. App-specific styling (log rows, stream cards,
+   the 3D pane, dialogs) lives in each app's own index.css, which main.tsx
+   imports after this file. */
+
+:root {
+  --bg: #0f1115;
+  --panel: #181b22;
+  --panel-2: #1f232c;
+  --panel-3: #262b36;
+  --border: #2a2f3a;
+  --text: #e4e7ee;
+  --muted: #8b93a3;
+  --headline: #aca3c3;
+  --accent: #4f8cff;
+  --ok: #3fb950;
+  --err: #f85149;
+  --bridge: #d29922;
+
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────────── */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.top-bar h1 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.conn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.url {
+  width: 230px;
+  font-family: ui-monospace, monospace;
+}
+
+/* Connection state dot inside the Connect/Disconnect button; the status-*
+   class supplies the color, currentColor paints the fill. */
+.status-dot {
+  display: inline-block;
+  width: 0.55em;
+  height: 0.55em;
+  margin-left: 0.45em;
+  border-radius: 50%;
+  vertical-align: 7.5%;
+  background: currentColor;
+  color: var(--muted);
+}
+
+/* Muted grey is hard to see on the accent-filled Connect button; brighten
+   the idle dot there. :where keeps specificity low so the status-* color
+   classes below still win (e.g. a red dot after an error). */
+:where(button.primary) .status-dot {
+  color: rgb(255 255 255 / 0.5);
+}
+
+.status-connected {
+  color: var(--ok);
+}
+
+.status-connecting {
+  color: var(--bridge);
+}
+
+.status-error {
+  color: var(--err);
+}
+
+/* ── Inputs & buttons ────────────────────────────────────────────────── */
+input,
+button {
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--panel-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4rem 0.55rem;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  font-weight: 600;
+}
+
+/* ── Segmented control ───────────────────────────────────────────────── */
+.segmented {
+  display: flex;
+}
+
+.segmented button {
+  border-radius: 0;
+  position: relative;
+}
+
+/* Overlap neighbors by 1px so adjacent borders collapse into a single
+   divider; raising z-index on hover/active then lets a button's full accent
+   outline draw on top instead of the neighbor clipping the shared edge. */
+.segmented button:not(:first-child) {
+  margin-left: -1px;
+}
+
+.segmented button:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.segmented button:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.segmented button:hover:not(:disabled),
+.segmented button.active {
+  z-index: 1;
+}
+
+.segmented button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  font-weight: 600;
+}
+
+/* ── Error banner ────────────────────────────────────────────────────── */
+.banner {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+
+.banner.error {
+  background: rgba(248, 81, 73, 0.12);
+  color: var(--err);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Empty-state placeholder, shared by the log and stream panes. */
+.empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--muted);
+}

@@ -1,0 +1,20 @@
+{
+  // Compiler options shared by every web package (the two apps + bridge-web-core).
+  // Each package layers target/lib/jsx and its own include on top of this.
+  "compilerOptions": {
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  }
+}

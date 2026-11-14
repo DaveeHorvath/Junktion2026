@@ -1,0 +1,8 @@
+# Managed by the Rokoko Device SDK installer; it replaces these entries on every install.
+bin
+examples
+sdk
+VERSION
+env
+env.fish
+.rokoko-device-sdk

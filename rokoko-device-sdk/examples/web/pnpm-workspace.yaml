@@ -1,0 +1,9 @@
+packages:
+  - "bridge-web-core"
+  - "rcsp-ws-bridge-web"
+  - "rgmp-ws-bridge-web"
+
+# esbuild ships a platform binary via a postinstall script; allow it to run so
+# Vite can bundle. (pnpm blocks dependency build scripts by default.)
+allowBuilds:
+  esbuild: true

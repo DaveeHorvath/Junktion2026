@@ -1,0 +1,177 @@
+/* RCSP console styling. The shared chrome (palette, app shell, top bar,
+   buttons, banner, .empty) lives in @rkk/bridge-web-core/styles.css, imported
+   ahead of this file in main.tsx. Only RCSP-specific rules live here. */
+
+:root {
+  /* Message-type accents used by the log badges, on top of the shared palette. */
+  --event: #58a6ff;
+  --cmd: #a371f7;
+}
+
+/* The shared stylesheet styles input + button; the console also has textareas. */
+textarea {
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4rem 0.55rem;
+  font-family: ui-monospace, monospace;
+  resize: vertical;
+  width: 100%;
+}
+
+/* ── Body layout ─────────────────────────────────────────────────────── */
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.controls {
+  width: 320px;
+  flex-shrink: 0;
+  padding: 1rem;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.controls h2 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 0 0 0.6rem;
+}
+
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.controls label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 0.6rem;
+}
+.controls label input,
+.controls label textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.hint {
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.hint.error {
+  color: var(--err);
+}
+
+/* ── Log pane ────────────────────────────────────────────────────────── */
+.log-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.log-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.log-bar .checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+.log-bar button {
+  margin-left: auto;
+  padding: 0.2rem 0.5rem;
+}
+
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.row {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.row.dir-out {
+  background: rgba(163, 113, 247, 0.06);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+.arrow {
+  color: var(--muted);
+}
+.track {
+  font-family: ui-monospace, monospace;
+}
+.time {
+  margin-left: auto;
+}
+
+.badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--text);
+}
+.badge-command {
+  background: rgba(163, 113, 247, 0.2);
+  color: var(--cmd);
+}
+.badge-response_ok {
+  background: rgba(63, 185, 80, 0.2);
+  color: var(--ok);
+}
+.badge-response_error {
+  background: rgba(248, 81, 73, 0.2);
+  color: var(--err);
+}
+.badge-event {
+  background: rgba(88, 166, 255, 0.2);
+  color: var(--event);
+}
+.badge-bridge_error {
+  background: rgba(210, 153, 34, 0.2);
+  color: var(--bridge);
+}
+
+.payload {
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
